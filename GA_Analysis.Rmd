@@ -1,0 +1,183 @@
+---
+title: "Google Analytics - Analysis"
+author: "Flávio Brito"
+date: "15 de julho de 2016"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: yes
+---
+DATA: **`r format(Sys.time(), "%d de %B de %Y")`**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+load("~/Trabalho_OneDrive/OneDrive/Source/Repos/hulahulaga/hulahulaga.RData")
+library(ggplot2)
+library(lubridate)
+library(xtable)
+
+```
+
+## Google Analytics - Analysis
+
+This document shows deep analysis about Servidor Portal behaviour 
+
+```{r df.Sessions.Date, echo=FALSE, warning=FALSE}
+
+#Analysis
+data <- df.Sessions.Date
+```
+###Texto
+```{r echo=FALSE, warning=FALSE}
+#Sessions
+total.Sessions <- sum(data$sessions)
+total_sessions <- prettyNum(total.Sessions, big.mark = ".", decimal.mark = ",")
+
+#Users
+total.Users <- sum(data$users)
+total_users <- prettyNum(total.Users, big.mark = ".", decimal.mark = ",")
+
+#Pageviews
+total.Pageviews <- sum(data$pageviews)
+total_pageviews <- prettyNum(total.Pageviews, big.mark = ".", decimal.mark = ",")
+
+page_views <- prettyNum(total.Pageviews, big.mark = ".", decimal.mark = ",")
+
+
+#Pages per Sessions
+pages.per.Session <- sum(data$pageviews)/sum(data$sessions)
+pages_per_Session <- prettyNum(pages.per.Session, big.mark = ".", decimal.mark = ",")
+
+
+#Bouce Rate = ga:bounces / ga:sessions
+bounce.Rate <- sum(data$bounces)/sum(data$sessions)
+bounce_Rate <- prettyNum(bounce.Rate, big.mark = ".", decimal.mark = ",")
+
+#Sessions AVG
+sessions.avg <- mean(data$sessions)
+sessions_avg <- prettyNum(sessions.avg , big.mark = ".", decimal.mark = ",")
+
+
+
+````
+<b>Total Sessions:</b>      `r  total_sessions` </br>
+<b>Total Users:</b>         `r  total_users` </br>
+<b>Pages Views:</b>         `r  page_views`</br>
+<b>Pages per Sessions:</b>  `r  pages_per_Session`</br>
+<b>Bouce Rate:</b>          `r  bounce_Rate`</br>
+<b>Sessions AVG:</b>        `r  sessions_avg`</br>
+
+
+
+```{r echo=FALSE, warning=FALSE}
+
+
+data1 <- data
+#It´ll be done bellow
+analysis_Session_Date <- as.data.frame(xtabs(sessions ~ month(date) , data=data1))
+````
+
+
+
+###Crosstab - Sessions vs Date
+
+```{r xtable, results="asis"}
+#Print Crosstab
+##Tabulation - Sessions vs Date
+print(xtable(analysis_Session_Date), type="html", include.rownames = TRUE)
+```
+
+
+### Plot Sessions Series
+```{r echo=FALSE, warning=FALSE}
+
+ggplot(data,aes(x=date,y=sessions)) + geom_line()
+```
+
+### Bloxplot comparing Sessions by Year
+```{r echo=FALSE, warning=FALSE}
+library(lubridate)
+year.vector <- year(data$date)
+date_facts <- factor(year.vector)
+boxplot(data=data,sessions~date_facts)
+
+```
+
+### Sessions by Month
+```{r echo=FALSE, warning=FALSE}
+
+#Line plot
+ggplot(data,aes(x=date,y=sessions), breaks = date_breaks("month")) + geom_line()
+```
+
+### Plot Sessions Series with Adjusted Line
+```{r echo=FALSE, warning=FALSE}
+
+#Adjusted Plot
+ggplot(data,aes(x=date,y=sessions)) +
+  geom_point(alpha=0.5) +
+  geom_smooth()
+
+
+#Histogram
+ggplot(data,aes(x=sessions)) + geom_histogram()
+
+#Line Plot - Minimal Theme
+ggplot(data,aes(x=date,y=sessions)) +
+  geom_line() +
+  theme_minimal()
+
+
+
+ggplot(data,aes(x=date,y=sessions)) +
+  geom_line() +
+  geom_hline(yintercept=avg, size=5, color="red") +
+  theme_minimal()
+
+#Sessions per day over two years
+ggplot(data,aes(x=date,y=sessions)) +
+  geom_line() +
+  geom_smooth() +
+  theme_minimal() +
+  xlab("Date") +
+  ylab("Number of sessions") +
+  ggtitle("Sessions per day over two years") +
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        plot.title = element_text(size = 25))
+
+
+#Sessions Scatter plot by Year
+ggplot(data, aes(x=date,y=sessions, size=sessions, color=as.factor(year.vector))) +
+  geom_point(alpha=0.8) +
+  xlab("Year") +
+  ylab("Sessions") +
+  ggtitle("Sessions per day over two years") +
+  scale_color_discrete(guide = guide_legend(title = "Year")) +
+  scale_size_continuous(guide = guide_legend(title = "Sessions (Count)")) +
+  theme_minimal() 
+
+
+#Sessions Scatter plot by Year
+ggplot(data, aes(x=date,y=sessions, size=sessions, color=as.factor(year.vector))) +
+  geom_point(alpha=0.9) +
+  xlab("Year") +
+  ylab("Sessions") +
+  ggtitle("Sessions per day over two years") +
+  scale_color_discrete(guide = guide_legend(title = "Year")) +
+  scale_size_continuous(guide = guide_legend(title = "Sessions (Count)"))
+
+#Forecast Sessions
+library(forecast)
+sessionsts <- ts(data$sessions, frequency=7)
+comp <- decompose(sessionsts)
+plot(comp)
+forecastmodel <- HoltWinters(sessionsts)
+plot(forecastmodel)
+
+sessionforecast <- forecast.HoltWinters(forecastmodel, h=30) # 30 days in future
+plot(sessionforecast)
+
+```
+
+
